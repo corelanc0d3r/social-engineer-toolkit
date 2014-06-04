@@ -46,20 +46,22 @@ filewrite=file(setdir + "/site.template", "w")
 if choice == "": choice = "1"
 
 selectedtemplateid = int(choice)
-if selectedtemplateid in templatelist:
-    selectedtemplateloc = templatelist[selectedtemplateid]
-    if os.path.isfile("src/html/index.template"): os.remove("src/html/index.template")
-    if selectedtemplateloc in templatedata:
-        URL = templatedata[selectedtemplateloc][0]
-        copymode = templatedata[selectedtemplateloc][1]
-    else:
-        # no prototype, default to blank URL and single file copy mode
-        URL = ""
-        copymode = 1
-    if copymode == 1:
-        shutil.copyfile("src/html/templates/%s/index.template" % selectedtemplateloc, "src/html/index.template")
-    elif copymode == 2:
-        for files in glob.glob('src/html/templates/%s/*.*' % selectedtemplateloc): shutil.copy(files, "src/html/")
+if not selectedtemplateid in templatelist:
+    selectedtemplateid = 1
+
+selectedtemplateloc = templatelist[selectedtemplateid]
+if os.path.isfile("src/html/index.template"): os.remove("src/html/index.template")
+if selectedtemplateloc in templatedata:
+    URL = templatedata[selectedtemplateloc][0]
+    copymode = templatedata[selectedtemplateloc][1]
+else:
+    # no prototype, default to blank URL and single file copy mode
+    URL = ""
+    copymode = 1
+if copymode == 1:
+    shutil.copyfile("src/html/templates/%s/index.template" % selectedtemplateloc, "src/html/index.template")
+elif copymode == 2:
+    for files in glob.glob('src/html/templates/%s/*.*' % selectedtemplateloc): shutil.copy(files, "src/html/")
     
 
 if not os.path.isdir(setdir + "/web_clone"):
