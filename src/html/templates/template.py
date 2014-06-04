@@ -30,8 +30,8 @@ templatelist = {}
 folderkey = 1
 for foldername in os.listdir(templateroot):
     if os.path.isdir(os.path.join(templateroot,foldername)): 
-        templatelist[folderkey] = foldername.lower()
-        print "  %d. %s" % (folderkey, foldername.title())
+        templatelist[folderkey] = foldername
+        print "  %d. %s" % (folderkey, foldername.lower().title())
         folderkey += 1
 
 choice=raw_input(setprompt(["2"],"Select a template"))
