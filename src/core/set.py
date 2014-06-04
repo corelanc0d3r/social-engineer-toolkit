@@ -136,14 +136,19 @@ try:
                         return_continue()
                         break
 
-                # Web Attack menu choice 9: Create or Import a CodeSigning Certificate
-                if attack_vector == '8':
-                    sys.path.append("src/html/unsigned")
-                    debug_msg(me, "importing 'src.html.unsigned.verified_sign'", 1)
+                # full screen attack vector
+                if attack_vector == '7':
+                    # dont need site cloner
+                    site_cloned = False
+                    # skip nat section and exit out
+                    choice3 = "-1"
+                    sys.path.append("src/webattack/fsattack")
+                    debug_msg(me, "importing 'src.webattack.fsaattack'", 1)
                     try:
-                        reload(verified_sign)
+                        reload(full)
                     except:
-                        import verified_sign
+                        import full
+
                 # Web Attack menu choice 9: Return to the Previous Menu
                 if attack_vector == '99': break
 
@@ -164,7 +169,7 @@ try:
                     #     USER INPUT: SHOW WEB ATTACK VECTORS MENU    #
                     ###################################################
 
-                    if attack_vector != "8":
+                    if attack_vector != "7":
                         debug_msg(me, "printing 'text.webattack_vectors_menu'", 5)
                         show_webvectors_menu = create_menu(text.webattack_vectors_text, text.webattack_vectors_menu)
                         print '  99) Return to Webattack Menu\n'
@@ -312,15 +317,7 @@ try:
 
                         # if java applet attack
                         if attack_vector == "java":
-                            # Allow Self-Signed Certificates
-                            fileopen = file("config/set_config", "r").readlines()
-                            for line in fileopen:
-                                line = line.rstrip()
-                                match = re.search("SELF_SIGNED_APPLET=ON", line)
-                                if match:
-                                    sys.path.append("src/html/unsigned/")
-                                    debug_msg(me, "importing 'src.html.unsigned.self_sign'", 1)
-                                    import self_sign
+                            applet_choice()
 
                     # Select SET quick setup
                     if choice3 == '1':
@@ -351,14 +348,17 @@ try:
                             reload(arp)
                         except:
                             import arp
+
                         # actual website attack here
                         # web_server.py is main core
                         sys.path.append("src/html/")
+
                         # clean up stale file
                         if os.path.isfile(setdir + "/cloner.failed"):
                             os.remove(setdir + "/cloner.failed")
 
                         site_cloned = True
+
                         debug_msg(me, "line 375: importing 'src.webattack.web_clone.cloner'", 1)
                         try: reload(src.webattack.web_clone.cloner)
                         except: import src.webattack.web_clone.cloner
@@ -892,7 +892,7 @@ try:
         #
         # Main Menu choice 8: Wireless Attack Point Attack Vector
         #
-        if main_menu_choice == '8':
+        if main_menu_choice == '7':
 
             if operating_system == "windows":
                 print_warning("Sorry. The wireless attack vector is not yet supported in Windows.")
@@ -975,7 +975,7 @@ try:
 
 
         # Main Menu choice 9: QRCode Generator
-        if main_menu_choice == '9':
+        if main_menu_choice == '8':
             try:
                 from PIL import Image, ImageDraw
                 from src.qrcode.qrgenerator import *
@@ -986,27 +986,27 @@ When you have the QRCode Generated, select an additional attack vector within SE
 deploy the QRCode to your victim. For example, generate a QRCode of the SET Java Applet
 and send the QRCode via a mailer.
 """
-                url = raw_input("Enter the URL you want the QRCode to go to: ")
-                # if the reports directory does not exist then create it
-                if not os.path.isdir("%s/reports" % (setdir)):
-                    os.makedirs("%s/reports" % (setdir))
-                gen_qrcode(url)
-                return_continue()
+                url = raw_input("Enter the URL you want the QRCode to go to (99 to exit): ")
+                if url != "99":
+                    # if the reports directory does not exist then create it
+                    if not os.path.isdir("%s/reports" % (setdir)):
+                        os.makedirs("%s/reports" % (setdir))
+                    gen_qrcode(url)
+                    return_continue()
 
             except ImportError:
-                print_error("This module requires python-imaging to work properly.")
-                print_error("In Ubuntu do apt-get install python-imaging")
-                print_error("Else refer to here for installation: http://code.google.com/appengine/docs/python/images/installingPIL.html")
-                return_continue()
+                    print_error("This module requires python-imaging to work properly.")
+                    print_error("In Ubuntu do apt-get install python-imaging")
+                    print_error("Else refer to here for installation: http://code.google.com/appengine/docs/python/images/installingPIL.html")
+                    return_continue()
 
         # Main Menu choice 10: PowerShell Attacks
-        if main_menu_choice == '10':
-            #show_powershell_menu = create_menu(text.powershell_text, text.powershell_menu)
-            #powershell_menu_choice = raw_input(setprompt(["1"], ""))
-            import src.powershell.powershell
+        if main_menu_choice == '9':
+            try: import src.powershell.powershell
+            except: reload(src.powershell.powershell)
 
         # Main Menu choice 11: Third Party Modules
-        if main_menu_choice == '11':
+        if main_menu_choice == '10':
             sys.path.append("src/core")
             debug_msg(me, "importing 'src.core.module_handler'", 1)
             try:
@@ -1017,39 +1017,6 @@ and send the QRCode via a mailer.
         # Main Menu choice 99: Exit the Social-Engineer Toolkit
         if main_menu_choice == '99':
             break
-
-        # Main Menu choice 7: SMS Spoofing Attack Vector
-        if main_menu_choice == '7':
-            sms_menu_choice = '0'
-            while sms_menu_choice != '3':
-
-            ###################################################
-            #        USER INPUT: SHOW SMS MENU                #
-            ###################################################
-                debug_msg(me, "printing 'text.sms_attack_text'", 5)
-                show_sms_menu = create_menu(text.sms_attack_text, text.sms_attack_menu)
-                sms_menu_choice = raw_input(setprompt(["7"], ""))
-
-                if sms_menu_choice == 'exit':
-                    exit_set()
-
-                if sms_menu_choice == '1':
-                    sys.path.append("src/sms/client/")
-                    debug_msg(me, "importing 'src.sms.client.sms_client'", 1)
-                    try:
-                        reload(sms_client)
-                    except:
-                        import sms_client
-
-                if sms_menu_choice == '2':
-                    sys.path.append("src/sms/client/")
-                    debug_msg(me, "importing 'src.sms.client.custom_sms_template'", 1)
-                    try:
-                        reload(custom_sms_template)
-                    except:
-                        import custom_sms_template
-
-                if sms_menu_choice == '99': break
 
 # handle keyboard interrupts
 except KeyboardInterrupt:

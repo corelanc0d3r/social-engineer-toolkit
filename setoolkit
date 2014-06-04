@@ -1,7 +1,6 @@
 #!/usr/bin/python
 import os
 import sys
-import traceback
 
 # if we are running in the path no need to change
 if os.path.isfile("setoolkit"):
@@ -28,12 +27,9 @@ if not os.path.isfile("config/set_config"):
 from src.core.setcore import *
 from src.core.menu import text
 from config.update_config import update_config
-try: import subprocess
-except: reload(subprocess)
-try: import shutil
-except: reload(shutil)
-try: import re
-except: reload(re)
+import subprocess
+import shutil
+import re
 
 # check directory and make it
 if not os.path.isdir("src/logs/"):
@@ -64,12 +60,15 @@ if not os.path.isdir(setdir + "/reports/"):
     os.makedirs(setdir + "/reports")
 
 
+# check bleeding edge
+bleeding_edge()
+
 # check to see if we have python-pycrypto
 try:
     from Crypto.Cipher import AES
 
 except ImportError:
-    print "[!] The python-pycrypto python module not installed. You will loose the ability to use multi-pyinjector."
+    print "[!] The python-pycrypto python module not installed. You will lose the ability to use multi-pyinjector."
     pass
 
 #########################################
@@ -146,9 +145,7 @@ try:
             print line.rstrip()
 
         print bcolors.RED + """
-The Social-Engineer Toolkit is designed purely for good and not evil. If you are planning on using this tool for malicious purposes that are
-not authorized by the company you are performing assessments for, you are violating the terms of service and license of this toolset. By hitting
-yes (only one time), you agree to the terms of service and that you will only use this tool for lawful purposes only.""" + bcolors.GREEN
+The Social-Engineer Toolkit is designed purely for good and not evil. If you are planning on using this tool for malicious purposes that are not authorized by the company you are performing assessments for, you are violating the terms of service and license of this toolset. By hitting yes (only one time), you agree to the terms of service and that you will only use this tool for lawful purposes only.""" + bcolors.GREEN
         choice = raw_input("\nDo you agree to the terms of service [y/n]: ")
         if choice == "yes" or choice == "y":
             filewrite = file("src/agreement4", "w")
@@ -156,7 +153,7 @@ yes (only one time), you agree to the terms of service and that you will only us
             filewrite.close()
             print bcolors.ENDC
         else:
-            print "[!] Exiting the Social-Engineer Toolkit, have a nice day." + bcolors.ENDC
+            print bcolors.ENDC + "[!] Exiting the Social-Engineer Toolkit, have a nice day." + bcolors.ENDC
             sys.exit()
 
     while 1:
@@ -207,20 +204,16 @@ yes (only one time), you agree to the terms of service and that you will only us
             try: reload(src.core.module_handler)
             except: import src.core.module_handler
 
-        # update metasploit
-        if main_menu_choice == '4':
-            update_metasploit()
-
         # update set
-        if main_menu_choice == '5':
+        if main_menu_choice == '4':
             update_set()
 
         # credits
-        if main_menu_choice == '6':
+        if main_menu_choice == '5':
             update_config()
 
         # update config
-        if main_menu_choice == '7':
+        if main_menu_choice == '6':
             help_menu()
 
 # handle keyboard interrupts
@@ -230,7 +223,6 @@ except KeyboardInterrupt:
 # handle exceptions
 except Exception, error:
     log(error)
-    log(traceback.format_exc())
     print "\n\n[!] Something went wrong, printing the error: "+ str(error)
 
 # cleanup routine

